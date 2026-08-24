@@ -178,7 +178,7 @@ docker:
   # Repository Name: 'apm001234-dkr-group'
   # Repository Path: 'com/example/my-app/'
   repository: 'apm0047460-dkr-group'
-  repository-path: '< repository path >'
+  repository-path: 'janus-defense-validation'
 
 #+--------------------+
 #|    Helm            |------------------------------------------------------------------------------------------------

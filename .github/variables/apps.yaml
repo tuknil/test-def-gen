@@ -10,12 +10,18 @@ apps:
   api:
     runtypeorm: false
     npm_name: api
+    service_directory: api
+    sourcedirectory: ./api
   sim:
     runtypeorm: false
     npm_name: sim
+    service_directory: sim
+    sourcedirectory: ./sim
   ui:
     runtypeorm: false
     npm_name: ui
+    service_directory: ui
+    sourcedirectory: ./ui
 
 ## Libraries in the Monorepo
 libs: {}
