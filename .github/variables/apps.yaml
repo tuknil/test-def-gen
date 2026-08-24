@@ -1,0 +1,21 @@
+## The name of the workflow file to be used in CI
+## Default: 'monorepo_ci.yaml'
+workflow_name: 'monorepo_ci.yaml'
+
+## The name of the main branch to compare commit changes against
+trunk_name: 'main'
+
+## Applications in the Monorepo
+apps:
+  api:
+    runtypeorm: false
+    npm_name: api
+  sim:
+    runtypeorm: false
+    npm_name: sim
+  ui:
+    runtypeorm: false
+    npm_name: ui
+
+## Libraries in the Monorepo
+libs: {}
