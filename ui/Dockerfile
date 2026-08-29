@@ -27,7 +27,6 @@ RUN --mount=type=secret,id=jfrog_username \
 
 FROM dependencies AS build
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 FROM ${NODE_IMAGE} AS runtime
@@ -40,11 +39,11 @@ RUN --mount=type=secret,id=corporate_ca,required=false \
 WORKDIR /app
 ENV HOSTNAME=0.0.0.0 \
     NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1 \
     PORT=5173
 
-COPY --from=build --chown=node:node /app/.next/standalone ./
-COPY --from=build --chown=node:node /app/.next/static ./.next/static
+COPY --from=build --chown=node:node /app/package.json ./package.json
+COPY --from=build --chown=node:node /app/package-lock.json ./package-lock.json
+COPY --from=build --chown=node:node /app/server.js ./server.js
 COPY --from=build --chown=node:node /app/public ./public
 
 USER node

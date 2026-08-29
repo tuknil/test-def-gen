@@ -6,7 +6,7 @@
  * shadow a candidate and produce genuinely unattributable blocking.
  */
 import { SEED_INSTANCES } from './instances.js';
-import { sha256, uuid, nowIso } from '../../lib/digest.js';
+import { sha256, uuid, nowIso } from '../lib/digest.js';
 
 const instances = new Map();
 

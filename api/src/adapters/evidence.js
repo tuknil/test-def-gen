@@ -9,7 +9,7 @@
  * process — the database is the store, so a restart changes nothing about what
  * a reviewer can retrieve.
  */
-import { sha256, nowIso } from '../../../lib/digest.js';
+import { sha256, nowIso } from '../../lib/digest.js';
 import { redact } from '../domain/invariants.js';
 import { upsertEvidence, selectEvidence, selectEvidenceList, insertBundle, selectBundle, selectBundleByDigest } from './db.js';
 

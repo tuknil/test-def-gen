@@ -7,7 +7,7 @@
  *   - Run lifecycle, audit, and the outbox stay in process: a run is mutable
  *     until terminal and its steps churn on every transition.
  */
-import { nowIso, uuid, sha256 } from '../../../lib/digest.js';
+import { nowIso, uuid, sha256 } from '../../lib/digest.js';
 import { insertResult, selectResult, selectLedger, selectLedgerStats, selectCaseMetrics } from './db.js';
 
 /**

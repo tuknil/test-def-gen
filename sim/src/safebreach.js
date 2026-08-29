@@ -7,7 +7,7 @@
  * boundary honest and swappable.
  */
 import { getInstance, sendTraffic } from './waf.js';
-import { uuid, nowIso } from '../../lib/digest.js';
+import { uuid, nowIso } from '../lib/digest.js';
 
 const executions = new Map();
 const LATENCY_MS = Number(process.env.SIM_LATENCY_MS ?? 120);

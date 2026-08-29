@@ -23,7 +23,7 @@ let servers = [];
 before(async () => {
   const { rmSync } = await import('node:fs');
   rmSync(process.env.DATA_DIR, { recursive: true, force: true });
-  const { createApp } = await import('../../lib/microhttp.js');
+  const { createApp } = await import('../lib/microhttp.js');
   const simModule = await import('../../sim/server.js');
   const { initDatabase } = await import('../src/adapters/db.js');
   const { registerRoutes } = await import('../src/http/routes.js');

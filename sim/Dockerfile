@@ -27,7 +27,6 @@ RUN --mount=type=secret,id=jfrog_username \
 
 FROM dependencies AS build
 COPY . .
-ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
 FROM ${NODE_IMAGE} AS runtime
@@ -40,16 +39,17 @@ RUN --mount=type=secret,id=corporate_ca,required=false \
 WORKDIR /app
 ENV HOSTNAME=0.0.0.0 \
     NODE_ENV=production \
-    NEXT_TELEMETRY_DISABLED=1 \
     PORT=8099
 
-COPY --from=build --chown=node:node /app/.next/standalone ./
-COPY --from=build --chown=node:node /app/.next/static ./.next/static
-COPY --from=build --chown=node:node /app/public ./public
+COPY --from=build --chown=node:node /app/package.json ./package.json
+COPY --from=build --chown=node:node /app/package-lock.json ./package-lock.json
+COPY --from=build --chown=node:node /app/lib ./lib
+COPY --from=build --chown=node:node /app/server.js ./server.js
+COPY --from=build --chown=node:node /app/src ./src
 
 USER node
 EXPOSE 8099
 HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:8099/').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:8099/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"
 
 CMD ["node", "server.js"]

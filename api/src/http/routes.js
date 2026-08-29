@@ -6,7 +6,7 @@
  * identities, applies the security boundary, computes replay identity, creates
  * the run, and enqueues. Every domain decision belongs to the worker.
  */
-import { httpError } from '../../../lib/microhttp.js';
+import { httpError } from '../../lib/microhttp.js';
 import { validateSubmitRequest, SUBMIT_REQUEST_SCHEMA, TERMINAL_STATES, ERROR_CATEGORIES, LIMITS } from '../domain/contracts.js';
 import { bindSuppliedInputs, summarizeInputs, InputBindingError } from '../domain/input_binding.js';
 import { loadExamples } from '../adapters/examples_store.js';
@@ -14,7 +14,7 @@ import * as store from '../adapters/persistence.js';
 import { getEvidence, listEvidence, getReferenceBundle } from '../adapters/evidence.js';
 import { enqueue, queueDepth, deadLetterQueue } from '../worker/queue.js';
 import { TOKENS, PERMITTED_CONTEXT_ENVIRONMENTS, PERMITTED_CONTROL_ADAPTERS, PERMITTED_RUNNER_ADAPTERS, ALGORITHM_VERSION } from '../config.js';
-import { uuid } from '../../../lib/digest.js';
+import { uuid } from '../../lib/digest.js';
 
 function authenticate(ctx, requiredRole) {
   const header = ctx.headers.authorization ?? '';
