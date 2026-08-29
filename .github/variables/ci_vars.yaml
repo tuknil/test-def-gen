@@ -21,8 +21,7 @@ build:
   npm-dependency: npm ci --legacy-peer-deps
 
   ## Command to run the build
-  npm-script: npm run build
-
+  
   ## Command to run the linter
   npm-script-lint: ''
 
