@@ -11,7 +11,7 @@
  * to appeal to. A digest supplied by the requestor is treated as an assertion to
  * check, never as the answer.
  */
-import { sha256 } from '../../../lib/digest.js';
+import { sha256 } from '../../lib/digest.js';
 
 export class InputBindingError extends Error {
   constructor(message, field) {

@@ -1,4 +1,4 @@
-import { createApp } from '../lib/microhttp.js';
+import { createApp } from './lib/microhttp.js';
 import { registerRoutes } from './src/http/routes.js';
 import { loadExamples } from './src/adapters/examples_store.js';
 import { initDatabase, selectLedgerStats, DB_DIR } from './src/adapters/db.js';

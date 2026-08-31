@@ -1,1 +1,14 @@
-{ "name": "external-execution-simulator", "version": "0.1.0", "private": true, "type": "module", "main": "server.js" }
+{
+  "name": "external-execution-simulator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "build": "node --check server.js && node --check src/instances.js && node --check src/safebreach.js && node --check src/waf.js && node --check lib/microhttp.js && node --check lib/digest.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

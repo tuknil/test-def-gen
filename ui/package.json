@@ -1,1 +1,14 @@
-{ "name": "defense-validation-ui", "version": "0.1.0", "private": true, "type": "module", "main": "server.js" }
+{
+  "name": "defense-validation-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "build": "node --check server.js && node --check public/js/api.js && node --check public/js/app.js && node --check public/js/ui.js && node --check public/js/views/ledger.js && node --check public/js/views/result.js && node --check public/js/views/validate.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

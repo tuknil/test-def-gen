@@ -9,7 +9,7 @@
  * become explicit observation gaps or a `malfunction`, never an assumed
  * blocked/permitted outcome.
  */
-import { nowIso, sha256 } from '../../../lib/digest.js';
+import { nowIso, sha256 } from '../../lib/digest.js';
 import { bindSuppliedInputs } from '../domain/input_binding.js';
 import { evaluateAdmission, resolveRequiredCases } from '../domain/admission.js';
 import { assessContext } from '../domain/context_evaluator.js';

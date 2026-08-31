@@ -8,7 +8,7 @@
  *
  * Nothing in here knows about terminal states, proof strength, or policy.
  */
-import { createApp, httpError } from '../lib/microhttp.js';
+import { createApp, httpError } from './lib/microhttp.js';
 import { listInstances, getInstance, describeInstance, applyCandidate, removeApplication, policyState, sendTraffic, resetInstances } from './src/waf.js';
 import { createExecution, getExecution, listExecutions } from './src/safebreach.js';
 
