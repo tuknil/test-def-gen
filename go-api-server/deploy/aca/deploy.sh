@@ -10,7 +10,7 @@
 set -euo pipefail
 
 # ---- required ----
-: "${DATABASE_URL:?set DATABASE_URL, e.g. postgres://user:pass@host:5432/mitigation?sslmode=require}"
+: "${DATABASE_URL:?set DATABASE_URL, e.g. postgres://user:pass@host:5432/defense_validation?sslmode=require}"
 : "${CAPABILITY_CALLBACK_TOKEN:?set CAPABILITY_CALLBACK_TOKEN to the shared orchestration callback secret}"
 
 # ---- core config ----

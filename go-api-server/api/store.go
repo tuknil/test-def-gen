@@ -69,13 +69,6 @@ func NewRunStore() (*RunStore, error) {
 	if strings.EqualFold(strings.TrimSpace(os.Getenv("DATABASE_MIGRATION_MODE")), "external") {
 		log.Printf("ledger: DATABASE_MIGRATION_MODE=external — skipping in-app schema migration")
 	} else {
-		// The capability was renamed from mitigation-check to defense-validation;
-		// carry an existing ledger over before the create below would shadow it
-		// with an empty table.
-		if err := renameLegacyLedger(db); err != nil {
-			_ = db.Close()
-			return nil, fmt.Errorf("rename legacy ledger: %w", err)
-		}
 		// The capability no longer produces a verdict, so the match column has no
 		// meaning. Drop it where an older ledger still carries it.
 		if _, err := db.Exec(
@@ -104,41 +97,6 @@ func NewRunStore() (*RunStore, error) {
 	s := &RunStore{db: db}
 	log.Printf("ledger: connected to postgres (%d run(s))", s.count())
 	return s, nil
-}
-
-// renameLegacyLedger moves a pre-rename mitigation_check_run table, and its
-// indexes, onto the defense_validation_run names. It is a no-op once the new
-// names exist, so it is safe to run on every start. A database that already
-// holds both tables is left alone: the old one is then stale, and picking a
-// winner is an operator decision, not this process's.
-func renameLegacyLedger(db *sql.DB) error {
-	_, err := db.Exec(`
-		DO $$
-		BEGIN
-			IF to_regclass('mitigation_check_run') IS NOT NULL
-			   AND to_regclass('defense_validation_run') IS NULL THEN
-				ALTER TABLE mitigation_check_run RENAME TO defense_validation_run;
-
-				IF to_regclass('mitigation_check_run_request_id_uq') IS NOT NULL
-				   AND to_regclass('defense_validation_run_request_id_uq') IS NULL THEN
-					ALTER INDEX mitigation_check_run_request_id_uq
-						RENAME TO defense_validation_run_request_id_uq;
-				END IF;
-				IF to_regclass('mitigation_check_run_worker_idx') IS NOT NULL
-				   AND to_regclass('defense_validation_run_worker_idx') IS NULL THEN
-					ALTER INDEX mitigation_check_run_worker_idx
-						RENAME TO defense_validation_run_worker_idx;
-				END IF;
-				IF to_regclass('mitigation_check_run_callback_idx') IS NOT NULL
-				   AND to_regclass('defense_validation_run_callback_idx') IS NULL THEN
-					ALTER INDEX mitigation_check_run_callback_idx
-						RENAME TO defense_validation_run_callback_idx;
-				END IF;
-
-				RAISE NOTICE 'ledger: renamed mitigation_check_run to defense_validation_run';
-			END IF;
-		END $$`)
-	return err
 }
 
 func (s *RunStore) count() int {

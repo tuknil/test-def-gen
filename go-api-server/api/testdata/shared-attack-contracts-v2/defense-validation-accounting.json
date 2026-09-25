@@ -1,6 +1,6 @@
 {
-  "capability": "mitigation-check",
-  "result_id": "mitigation-check-result:illustrative-42-r2",
+  "capability": "defense-validation",
+  "result_id": "defense-validation-result:illustrative-42-r2",
   "profile_id": "waf-standard@1",
   "source_results": {
     "attack_match_semantics": "check-generation-complete-result.json",

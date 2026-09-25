@@ -36,7 +36,7 @@ func openLedgerDB() (*sql.DB, error) {
 	}
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		dsn = "postgres://mc:mc@localhost:5432/mitigation?sslmode=disable"
+		dsn = "postgres://mc:mc@localhost:5432/defense_validation?sslmode=disable"
 	}
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {

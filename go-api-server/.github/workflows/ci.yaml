@@ -68,16 +68,16 @@ jobs:
         env:
           POSTGRES_USER: mc
           POSTGRES_PASSWORD: mc
-          POSTGRES_DB: mitigation
+          POSTGRES_DB: defense_validation
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U mc -d mitigation"
+          --health-cmd "pg_isready -U mc -d defense_validation"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 12
     env:
-      DV_TEST_DATABASE_URL: postgres://mc:mc@localhost:5432/mitigation?sslmode=disable
+      DV_TEST_DATABASE_URL: postgres://mc:mc@localhost:5432/defense_validation?sslmode=disable
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

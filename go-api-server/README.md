@@ -328,7 +328,7 @@ The UI shows a left **Runs** panel; clicking a run opens its immutable request
 **Persistence — PostgreSQL container.** The ledger is stored in a `db` Postgres
 service (`postgres:16-alpine`) defined in `docker-compose.yml`. The immutable
 request and the executed response are `JSONB` columns of `defense_validation_run`.
-The API connects via `DATABASE_URL` (default `postgres://mc:mc@db:5432/mitigation`)
+The API connects via `DATABASE_URL` (default `postgres://mc:mc@db:5432/defense_validation`)
 and waits for the db healthcheck before serving.
 
 The db data lives on the named volume `pgdata` (`/var/lib/postgresql/data`), so

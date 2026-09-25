@@ -6,7 +6,7 @@ so the `local` execution mode is unavailable — use `inmemory`, `aci`, `aci-sp`
 with the `az` CLI.
 
 ```bash
-DATABASE_URL='postgres://mc:pass@myserver.postgres.database.azure.com:5432/mitigation?sslmode=require' \
+DATABASE_URL='postgres://mc:pass@myserver.postgres.database.azure.com:5432/defense_validation?sslmode=require' \
 CAPABILITY_CALLBACK_TOKEN='<shared-secret>' \
 CAPABILITY_CALLBACK_ALLOWED_HOSTS='orchestration-api.example.com' \
 RG=mc-nonprod-rg LOCATION=eastus \
@@ -32,7 +32,7 @@ If the packages are **private**, set `REGISTRY_SERVER`/`REGISTRY_USERNAME`/
 
 ### 2. PostgreSQL
 Use **Azure Database for PostgreSQL Flexible Server** (ACA is stateless). Create
-the `mitigation` database and pass its URL as `DATABASE_URL` (with
+the `defense_validation` database and pass its URL as `DATABASE_URL` (with
 `sslmode=require`). The API creates its own table on start.
 
 ### 3. `az` CLI logged in

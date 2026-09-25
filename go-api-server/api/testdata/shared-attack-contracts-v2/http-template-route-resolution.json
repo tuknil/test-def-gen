@@ -2,7 +2,7 @@
   "illustrative": true,
   "template_id": "input-http-template-42",
   "resolver_profiles": {
-    "mitigation_check_result": "mc-http-route-profile.json",
+    "defense_validation_result": "mc-http-route-profile.json",
     "bypass_validation_result": "bv-http-route-profile.json"
   },
   "template": {
@@ -38,8 +38,8 @@
       "digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     }
   },
-  "mitigation_check_result": {
-    "capability": "mitigation-check",
+  "defense_validation_result": {
+    "capability": "defense-validation",
     "profile_id": "waf-standard@1",
     "request_resolution": {
       "template_id": "input-http-template-42",

@@ -47,8 +47,8 @@
   },
   "proof_handoffs": [
     {
-      "capability": "mitigation-check",
-      "contract_id": "mitigation-check@1.0",
+      "capability": "defense-validation",
+      "contract_id": "defense-validation@1.0",
       "substrate": "registered-waf-route-v1",
       "candidate_ref": {
         "system": "databricks",

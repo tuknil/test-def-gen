@@ -13,13 +13,13 @@ services:
     environment:
       POSTGRES_USER: mc
       POSTGRES_PASSWORD: mc
-      POSTGRES_DB: mitigation
+      POSTGRES_DB: defense_validation
     volumes:
       - pgdata:/var/lib/postgresql/data      # durable ledger data
     networks:
       - dvnet
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mc -d mitigation"]
+      test: ["CMD-SHELL", "pg_isready -U mc -d defense_validation"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -32,7 +32,7 @@ services:
     environment:
       PORT: "8137"
       GODEBUG: x509negativeserial=1
-      DATABASE_URL: postgres://mc:mc@db:5432/mitigation?sslmode=disable
+      DATABASE_URL: postgres://mc:mc@db:5432/defense_validation?sslmode=disable
       # Ledger DB auth. Unset (default) uses DATABASE_URL above (password, local db
       # container). Set DATABASE_AUTH_MODE=entra to connect to Azure Database for
       # PostgreSQL with a Microsoft Entra ID token (reuses the AZURE_* creds below);
