@@ -66,7 +66,7 @@ Provide evidence that an exact translated defense behaves correctly on represent
 | Input | Type / schema | Authoritative source | Required? | Freshness / integrity rules |
 |---|---|---|---:|---|
 | Control-specific mitigation candidate | `ControlCandidate@1` | control-translation result/store | Yes | Exact immutable artifact/digest; target control class/technology/syntax; translation ancestry |
-| Attack/test suite | `AttackSuite@1` | check-generation, BAS/SafeBreach, source-backed test source, discriminator source | Yes | Stable case IDs, expected absent/present behavior, proof strength/provenance |
+| Attack/test suite | `AttackSuite@1` | BAS/SafeBreach, source-backed test source, discriminator source | Yes | Stable case IDs, expected absent/present behavior, proof strength/provenance |
 | Representative benign suite | `BenignSuite@1` | approved suite repository | Yes | Stable cases, expected permitted outcomes, representativeness limits |
 | Validation context | `ValidationContext@1` | approved context registry | Yes | Control/version/config fingerprint, application mechanism, isolation/reset, observation and fidelity evidence |
 | Validation profile | `DefenseValidationProfile@1` | signed semantic registry | Yes | Approved immutable version; defines supported semantics/fidelity/suite sufficiency |

@@ -1,0 +1,684 @@
+openapi: 3.0.3
+info:
+  title: defense-validation API
+  version: "1.0"
+  description: >
+    Resolves one defensive control candidate from a verified producer result and
+    reports it (contract `defense-validation@1.0`). The rule may come from a
+    control-translation row named by `upstream_inputs`, or inline in the request.
+
+    This capability does NOT judge the rule: nothing is executed, no traffic is
+    sent, and the result carries no verdict — no expected/actual, no match, no
+    substrate. Pushing the rule to a third-party control plane is the next stage,
+    and any pass/fail determination belongs to that plane.
+
+    Canonical submission is asynchronous and creates a durable PostgreSQL run
+    before a leased worker resolves the rule. Valid transitions are queued to
+    running to a terminal state, queued to canceled, running to queued for
+    publication retry, and expired running to failed or canceled during recovery.
+    Terminal runs are immutable.
+servers:
+  - url: http://localhost:8137
+    description: Local / Docker Compose
+
+paths:
+  /v1/defense-validation-runs:
+    post:
+      summary: Submit a durable asynchronous defense-validation run
+      operationId: submitRun
+      description: >
+        Validates and durably queues work, then immediately returns. Identical
+        retries reuse the run; reuse with a different normalized digest is 409.
+        Only the application/json media type is accepted. The three optional
+        X-Janus-Callback-* headers enable a durable terminal-state wakeup;
+        polling remains the canonical fallback.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+        - $ref: "#/components/parameters/CorrelationID"
+        - $ref: "#/components/parameters/CallbackURL"
+        - $ref: "#/components/parameters/CallbackWorkflowID"
+        - $ref: "#/components/parameters/CallbackSignal"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitDefenseValidationRequest"
+            examples:
+              inlineRule:
+                summary: Report a rule supplied inline
+                value:
+                  contract_id: defense-validation@1.0
+                  candidate_artifact_id: candidate:log4shell:waf-rule:strict
+                  test_basis_id: test-basis:log4shell:attack:jndi-ldap
+                  check_profile_id: defense-validation-profile:waf-http:1
+                  candidate:
+                    kind: waf-rule
+                    engine: modsecurity
+                    rule_id: "1005440"
+                    action: deny
+                    rule: >-
+                      SecRule REQUEST_HEADERS|REQUEST_URI|ARGS "@rx (?i)\$\{jndi:(?:ldaps?|rmi|dns):/[^}]*\}" "id:1005440,phase:2,deny,status:403"
+              upstreamRow:
+                summary: Resolve the rule from a control-translation row
+                value:
+                  contract_id: defense-validation@1.0
+                  request_id: janus-defense-validation-request-1
+                  correlation_id: correlation-1
+                  candidate_artifact_id: candidate:akamai-waf:e6fcf665
+                  test_basis_id: unused-in-this-mode
+                  check_profile_id: defense-validation-profile:waf-http:1
+                  upstream_inputs:
+                    - capability: control-translation
+                      contract_id: control-translation-result@2.0
+                      result_id: control-translation-result:e0b7e5cf
+                      result_ref:
+                        system: databricks
+                        catalog: 36889_janus_dev
+                        schema: control_translation
+                        table: control_translation_results
+                        key: control-translation-result:e0b7e5cf
+      responses:
+        "202":
+          description: Run durably queued or running.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionResponse"
+        "200":
+          description: Idempotent replay of an already-terminal run.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SubmissionResponse"
+        "400":
+          description: Request does not satisfy the contract.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "415":
+          description: Content-Type is not application/json.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "409":
+          description: The idempotency key is bound to another request digest.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+    get:
+      summary: List runs (newest first)
+      operationId: listRuns
+      responses:
+        "200":
+          description: Run summaries.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RunSummary"
+
+  /v1/defense-validation-runs/{run_id}:
+    get:
+      summary: Get cheap compact run status
+      operationId: getRun
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+          example: dv-run-a2366a64394de5472eb39642
+      responses:
+        "200":
+          description: Side-effect-free status envelope.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunStatus"
+        "404":
+          description: Run not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /v1/defense-validation-runs/{run_id}/result:
+    get:
+      summary: Get the immutable terminal result
+      operationId: getRunResult
+      parameters:
+        - $ref: "#/components/parameters/RunID"
+      responses:
+        "200":
+          description: Full immutable result, or terminal failed/canceled status.
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: "#/components/schemas/RunOutcome"
+                  - $ref: "#/components/schemas/RunStatus"
+        "409":
+          description: Run is queued or running.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+        "404":
+          description: Run not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorEnvelope"
+
+  /v1/defense-validation-runs/{run_id}/cancel:
+    post:
+      summary: Idempotently request cancellation
+      operationId: cancelRun
+      parameters:
+        - $ref: "#/components/parameters/RunID"
+      responses:
+        "200":
+          description: >
+            Current status. Running work remains running while cooperative
+            cancellation is in progress. Terminal runs are never changed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunStatus"
+
+  /v1/compat/defense-validation-runs:
+    post:
+      summary: Execute synchronously for legacy UI compatibility
+      deprecated: true
+      operationId: submitRunSynchronously
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitDefenseValidationRequest"
+      responses:
+        "200":
+          description: Full terminal result.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunOutcome"
+
+  /healthz:
+    get:
+      summary: Liveness probe
+      operationId: health
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+components:
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    CorrelationID:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 1 }
+    CallbackURL:
+      name: X-Janus-Callback-URL
+      in: header
+      required: false
+      description: HTTPS orchestration callback endpoint. Required with the other callback headers.
+      schema: { type: string, format: uri, pattern: "^https://" }
+    CallbackWorkflowID:
+      name: X-Janus-Callback-Workflow-ID
+      in: header
+      required: false
+      description: Temporal child workflow ID only; a workflow run ID is never accepted or required.
+      schema: { type: string, minLength: 1 }
+    CallbackSignal:
+      name: X-Janus-Callback-Signal
+      in: header
+      required: false
+      description: Required with the other callback headers.
+      schema: { type: string, enum: ["janus.capability-completion.v1"] }
+    RunID:
+      name: run_id
+      in: path
+      required: true
+      schema: { type: string }
+  schemas:
+    SubmitDefenseValidationRequest:
+      type: object
+      additionalProperties: false
+      required: [contract_id, candidate_artifact_id, test_basis_id, check_profile_id]
+      properties:
+        contract_id:
+          type: string
+          enum: ["defense-validation@1.0"]
+        request_id:
+          type: string
+          minLength: 1
+          description: Must equal Idempotency-Key. May be omitted during migration and is then populated from that header.
+        candidate_artifact_id:
+          type: string
+          minLength: 1
+          description: Immutable candidate mitigation reference.
+        test_basis_id:
+          type: string
+          minLength: 1
+          description: >
+            Opaque producer selector, retained for compatibility. No test is
+            derived from it: nothing is executed here.
+        check_profile_id:
+          type: string
+          minLength: 1
+          description: Signed check profile reference.
+        correlation_id:
+          type: string
+          description: >
+            Must equal X-Correlation-ID. May be omitted during migration and is
+            then populated from that required header.
+          example: "mc-request:CVE-2021-44228:waf:1"
+        candidate:
+          allOf:
+            - $ref: "#/components/schemas/CandidateSpec"
+          description: >
+            The rule, supplied inline. Accepted only in inline mode: the locator
+            and shared-contract routes reject caller-supplied bodies. Inline mode
+            carries no producer lineage, so the rule is not verified against any
+            upstream result.
+        enforcement:
+          type: object
+          description: >
+            Opts this run into posting an XSIAM enforcement issue once the rule is
+            resolved and its Databricks rule row is written. Omit it and nothing is
+            posted. XSIAM credentials are NOT taken from here — they come from the
+            server environment, so a request cannot redirect the hand-off to
+            another tenant. Unknown properties are rejected: a mistyped key would
+            otherwise be dropped and the issue posted with that value missing.
+          additionalProperties: false
+          required: [cve]
+          properties:
+            cve: { type: string, example: CVE-2026-77392 }
+            policy_id: { type: string, example: policy-1 }
+            rule_id: { type: integer, format: int64, example: 60022381 }
+            policy_version: { type: integer, example: 43 }
+            control_instance_id: { type: string, example: "control-instance:akamai-production" }
+            protected_hostname: { type: string, example: afo.example.com }
+            target_scope_id: { type: string, example: "population-scope:prod-web" }
+            expected_current_action:
+              type: string
+              default: alert
+              description: The action the policy is expected to be in now.
+            expected_live_state_hash:
+              type: string
+              description: Caller's hash of current live state. Never invented when absent.
+            recovery_spec_ref: { type: string }
+            severity: { type: string, default: HIGH }
+            change_ref: { type: string, example: "servicenow-change:CHG0123456" }
+            justification: { type: string }
+            authorization_id: { type: string }
+            authorization_artifact_id: { type: string }
+            authorization_status: { type: string }
+            recovery_authorized: { type: boolean }
+            expires_at: { type: string, format: date-time }
+        upstream_inputs:
+          type: array
+          description: >
+            Upstream-mode input (env DV_INPUT_UPSTREAM). Each entry's result_ref
+            points at a Databricks row. The rule is read from the
+            control-translation entry, and only from that entry: its
+            primary_candidate carries no content, so the rule is resolved through
+            the artifacts map by artifact_id and verified against its content_hash.
+            A referenced result of any other capability is rejected. Other entries
+            may be present as lineage but are never read as the rule. The top-level
+            contract remains "defense-validation@1.0" and canonical identity fields
+            remain required.
+          items:
+            $ref: "#/components/schemas/UpstreamInput"
+        primary_candidate:
+          type: object
+          description: >
+            Upstream producer candidate envelope. Accepted so a full producer
+            payload validates; the rule is read from Databricks, not from here.
+        callback:
+          type: object
+          deprecated: true
+          description: >
+            Unsupported body-level callback metadata. Use the three
+            X-Janus-Callback-* request headers instead.
+          additionalProperties: false
+          required: [url]
+          properties:
+            url: { type: string, format: uri, pattern: "^https://" }
+            event_contract_id: { type: string, enum: ["capability-run-event@1.0"] }
+
+    SubmissionResponse:
+      type: object
+      required: [capability, contract_id, request_id, correlation_id, run_id, status, status_url, result_url, accepted_at]
+      properties:
+        capability: { type: string, enum: [defense-validation] }
+        contract_id: { type: string, enum: ["defense-validation-run-submission@1.0"] }
+        request_id: { type: string }
+        correlation_id: { type: string }
+        run_id: { type: string }
+        status: { type: string, enum: [queued, running, completed, failed, canceled] }
+        status_url: { type: string }
+        result_url: { type: string }
+        accepted_at: { type: string, format: date-time }
+
+    RunStatus:
+      type: object
+      required: [capability, contract_id, request_id, correlation_id, run_id, status, created_at, updated_at, progress]
+      properties:
+        capability: { type: string, enum: [defense-validation] }
+        contract_id: { type: string, enum: ["capability-run-status@1.0"] }
+        request_id: { type: string }
+        correlation_id: { type: string }
+        run_id: { type: string }
+        status: { type: string, enum: [queued, running, completed, failed, canceled] }
+        terminal_state: { type: string, nullable: true }
+        result_id: { type: string, nullable: true }
+        created_at: { type: string, format: date-time }
+        started_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time }
+        completed_at: { type: string, format: date-time, nullable: true }
+        progress: { $ref: "#/components/schemas/Progress" }
+        failure: { $ref: "#/components/schemas/Failure", nullable: true }
+        completion:
+          allOf:
+            - $ref: "#/components/schemas/Completion"
+          nullable: true
+
+    Completion:
+      type: object
+      required: [capability, contract_id, request_id, correlation_id, run_id, result_id, status, terminal_state, result_ref, evidence_refs, content_sha256, size_bytes, created_at]
+      properties:
+        capability: { type: string, enum: [defense-validation] }
+        contract_id: { type: string, enum: ["capability-completion@1.0"] }
+        request_id: { type: string }
+        correlation_id: { type: string }
+        run_id: { type: string }
+        result_id: { type: string }
+        status: { type: string, enum: [completed] }
+        terminal_state: { type: string, enum: [rule-resolved, failed, malfunction] }
+        result_ref: { $ref: "#/components/schemas/ResultRef" }
+        evidence_refs:
+          type: array
+          items: { type: string }
+        content_sha256: { type: string, pattern: "^sha256:[0-9a-f]{64}$" }
+        size_bytes: { type: integer, minimum: 1 }
+        created_at: { type: string, format: date-time }
+
+    Progress:
+      type: object
+      properties:
+        phase: { type: string }
+        percent: { type: integer, nullable: true }
+        message: { type: string }
+
+    Failure:
+      type: object
+      required: [code, detail, retryable]
+      properties:
+        code: { type: string }
+        detail: { type: string }
+        retryable: { type: boolean }
+
+    UpstreamInput:
+      type: object
+      description: >
+        One referenced producer result. Only the control-translation entry is read
+        as the rule; any other entry is lineage.
+      properties:
+        capability:
+          type: string
+          example: control-translation
+        contract_id:
+          type: string
+          example: control-translation-result@2.0
+        result_id:
+          type: string
+        result_ref:
+          type: object
+          properties:
+            system: { type: string, example: databricks }
+            catalog: { type: string, example: 36889_janus_dev }
+            schema: { type: string, example: control_translation }
+            table: { type: string, example: control_translation_results }
+            key:
+              type: string
+              example: "control-translation-result:e0b7e5cf-24ce-4c2b-9112-afc3006576de"
+        evidence_refs:
+          type: array
+          description: >
+            Stable deduplicated lineage from the verified upstream producer
+            results the rule was resolved from.
+          items:
+            type: string
+
+    CandidateSpec:
+      type: object
+      description: Inline candidate mitigation (here, a ModSecurity WAF rule).
+      required: [kind, rule]
+      properties:
+        kind:
+          type: string
+          example: waf-rule
+        engine:
+          type: string
+          example: modsecurity
+        rule_id:
+          type: string
+          example: "1005440"
+        rule:
+          type: string
+          description: The actual SecRule; its @rx pattern + id/status are applied.
+        action:
+          type: string
+          example: deny
+
+    RunOutcome:
+      type: object
+      description: >
+        Result envelope plus the resolved rule and how it was obtained. There is
+        no verdict here: no expected/actual, no match, no substrate.
+      required: [capability, contract_id, request_id, correlation_id, run_id, result_id, terminal_state, status, result_ref, evidence_refs, request_sha256, prose_summary, content_sha256, size_bytes, created_at]
+      properties:
+        capability:
+          type: string
+          enum: ["defense-validation"]
+        contract_id:
+          type: string
+          enum: ["defense-validation@1.0"]
+        request_id:
+          type: string
+        run_id:
+          type: string
+        result_id:
+          type: string
+        terminal_state:
+          type: string
+          enum: [rule-resolved, failed, malfunction]
+          description: >
+            rule-resolved means a rule was read from a verified producer result and
+            reported; it says nothing about whether the rule is effective. failed
+            means no rule could be resolved. malfunction is an internal fault.
+        status:
+          type: string
+          enum: [completed, failed]
+          description: >
+            Lifecycle status. Canonical asynchronous completion is reported only
+            after immutable Databricks publication succeeds.
+        correlation_id:
+          type: string
+          description: Echoed from the request; omitted when not supplied.
+        result_ref:
+          $ref: "#/components/schemas/ResultRef"
+        evidence_refs:
+          type: array
+          items:
+            type: string
+        request_sha256:
+          type: string
+          pattern: "^sha256:[0-9a-f]{64}$"
+          description: SHA-256 of the normalized request bound to the idempotency key.
+        enforcement:
+          type: object
+          description: >
+            Opts this run into posting an XSIAM enforcement issue once the rule is
+            resolved and its Databricks rule row is written. Omit it and nothing is
+            posted. XSIAM credentials are NOT taken from here — they come from the
+            server environment, so a request cannot redirect the hand-off to
+            another tenant. Unknown properties are rejected: a mistyped key would
+            otherwise be dropped and the issue posted with that value missing.
+          additionalProperties: false
+          required: [cve]
+          properties:
+            cve: { type: string, example: CVE-2026-77392 }
+            policy_id: { type: string, example: policy-1 }
+            rule_id: { type: integer, format: int64, example: 60022381 }
+            policy_version: { type: integer, example: 43 }
+            control_instance_id: { type: string, example: "control-instance:akamai-production" }
+            protected_hostname: { type: string, example: afo.example.com }
+            target_scope_id: { type: string, example: "population-scope:prod-web" }
+            expected_current_action:
+              type: string
+              default: alert
+              description: The action the policy is expected to be in now.
+            expected_live_state_hash:
+              type: string
+              description: Caller's hash of current live state. Never invented when absent.
+            recovery_spec_ref: { type: string }
+            severity: { type: string, default: HIGH }
+            change_ref: { type: string, example: "servicenow-change:CHG0123456" }
+            justification: { type: string }
+            authorization_id: { type: string }
+            authorization_artifact_id: { type: string }
+            authorization_status: { type: string }
+            recovery_authorized: { type: boolean }
+            expires_at: { type: string, format: date-time }
+        upstream_inputs:
+          type: array
+          description: Exact authoritative upstream result identities the rule was resolved from.
+          items:
+            $ref: "#/components/schemas/UpstreamInput"
+        candidate:
+          allOf:
+            - $ref: "#/components/schemas/CandidateSpec"
+          description: >
+            The resolved rule (embedded so a defense_validation row is
+            self-contained; consumers need not query the upstream table). Stripped
+            from the API result response, present in the canonical row.
+        detail:
+          type: string
+          description: Why a run failed, or how the rule was obtained on success.
+        steps:
+          type: array
+          items:
+            type: string
+        prose_summary:
+          type: string
+        limitations:
+          type: array
+          items:
+            type: string
+        content_sha256:
+          type: string
+          pattern: "^sha256:[0-9a-f]{64}$"
+        size_bytes:
+          type: integer
+          minimum: 1
+        created_at:
+          type: string
+          format: date-time
+
+    ResultRef:
+      type: object
+      description: >
+        Pointer to where the full result row is stored so another service can
+        query it. When `placeholder` is true nothing has been written at this
+        address: it names where the row would go, and must not be read as a row.
+      required: [system, catalog, schema, table, key]
+      properties:
+        system:
+          type: string
+          example: databricks
+        catalog:
+          type: string
+        schema:
+          type: string
+        table:
+          type: string
+          example: defense_validation
+        key:
+          type: string
+          description: >
+            The result_id value itself — the same string in the top-level result_id
+            and in the table's result_id column. Query WHERE result_id = <key>.
+          example: "defense-validation-result:1c40b2497a6f766452572f2c"
+        placeholder:
+          type: boolean
+          description: >
+            Present and true only when no authoritative sink was configured, so no
+            row was written. Absent on a published result. A consumer must never
+            query a placeholder reference expecting a row.
+
+    RunSummary:
+      type: object
+      properties:
+        run_id:
+          type: string
+        result_id:
+          type: string
+        terminal_state:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        summary:
+          type: string
+
+    RunRecord:
+      type: object
+      properties:
+        run_id:
+          type: string
+        result_id:
+          type: string
+        terminal_state:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        request:
+          $ref: "#/components/schemas/SubmitDefenseValidationRequest"
+        response:
+          $ref: "#/components/schemas/RunOutcome"
+
+    ErrorEnvelope:
+      type: object
+      required: [code, detail, retryable]
+      properties:
+        code:
+          type: string
+          example: invalid_request
+        detail:
+          type: string
+        retryable:
+          type: boolean
