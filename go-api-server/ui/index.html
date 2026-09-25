@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>defense-validation · Rules</title>
+  <link rel="stylesheet" href="styles.css?v=14" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <h2>Runs</h2>
+        <div class="head-actions">
+          <button id="new-btn" title="New run">＋ New</button>
+          <button id="refresh-btn" title="Refresh">↻</button>
+        </div>
+      </div>
+      <ul id="run-list" class="run-list">
+        <li class="run-empty">No runs yet.</li>
+      </ul>
+    </aside>
+
+    <main class="main">
+      <section class="panel" id="composer">
+        <h1>Resolve a defensive control candidate</h1>
+        <p class="lede">
+          Names a verified producer result — or carries the rule inline — and the
+          service reports the rule it resolved. Nothing is executed and no
+          block/pass verdict is produced.
+        </p>
+        <form id="run-form" novalidate>
+          <label class="field">
+            <span class="field-label">Request payload (JSON)</span>
+            <textarea id="payload" name="payload" spellcheck="false" rows="12"></textarea>
+          </label>
+          <label class="field">
+            <span class="field-label">API base URL</span>
+            <input id="api-base" placeholder="http://localhost:8137" />
+          </label>
+          <div class="field">
+            <span class="field-label">Input mode</span>
+            <div class="toggle" id="input-toggle" role="tablist">
+              <button type="button" class="toggle-opt active" data-mode="inline">Inline rule</button>
+              <button type="button" class="toggle-opt" data-mode="upstream">Upstream result</button>
+            </div>
+            <span class="field-note" id="input-note"></span>
+          </div>
+          <button type="submit" id="submit-btn">Resolve rule · POST</button>
+        </form>
+        <div id="composer-status" class="response idle">
+          Submit to resolve and report the rule.
+        </div>
+      </section>
+
+      <section class="panel" id="detail" hidden></section>
+    </main>
+  </div>
+
+  <script src="env.js"></script>
+  <script src="app.js?v=14"></script>
+</body>
+</html>
