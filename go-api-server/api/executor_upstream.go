@@ -28,7 +28,6 @@ import (
 
 const (
 	capDefenseGeneration  = "defense-generation"
-	capCheckGeneration    = "check-generation"
 	capControlTranslation = "control-translation"
 )
 

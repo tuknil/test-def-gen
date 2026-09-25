@@ -21,23 +21,18 @@ import (
 // RunOutcome is the result of one run: the envelope, the resolved rule, and how
 // it was obtained.
 type RunOutcome struct {
-	Capability      string             `json:"capability"`
-	ContractID      string             `json:"contract_id"`
-	RequestID       string             `json:"request_id"`
-	RunID           string             `json:"run_id"`
-	ResultID        string             `json:"result_id"`
-	TerminalState   string             `json:"terminal_state"`
-	Status          string             `json:"status"`
-	CorrelationID   string             `json:"correlation_id,omitempty"`
-	ResultRef       *ResultRef         `json:"result_ref,omitempty"`
-	EvidenceRefs    []string           `json:"evidence_refs"`
-	RequestSHA256   string             `json:"request_sha256"`
-	UpstreamInputs  json.RawMessage    `json:"upstream_inputs,omitempty"`
-	InputProvenance *LocatorProvenance `json:"input_provenance,omitempty"`
-	ProfileID       string             `json:"profile_id,omitempty"`
-	// ApplicationUnit records which artifact set was read back for the shared-contract
-	// path. It is provenance for the rule, not a judgement about it.
-	ApplicationUnit *AppliedApplicationUnit `json:"application_unit,omitempty"`
+	Capability     string          `json:"capability"`
+	ContractID     string          `json:"contract_id"`
+	RequestID      string          `json:"request_id"`
+	RunID          string          `json:"run_id"`
+	ResultID       string          `json:"result_id"`
+	TerminalState  string          `json:"terminal_state"`
+	Status         string          `json:"status"`
+	CorrelationID  string          `json:"correlation_id,omitempty"`
+	ResultRef      *ResultRef      `json:"result_ref,omitempty"`
+	EvidenceRefs   []string        `json:"evidence_refs"`
+	RequestSHA256  string          `json:"request_sha256"`
+	UpstreamInputs json.RawMessage `json:"upstream_inputs,omitempty"`
 
 	// Candidate is the resolved rule. It stays in the exact canonical result
 	// persisted to Databricks (reachable by a consumer via result_ref) but is

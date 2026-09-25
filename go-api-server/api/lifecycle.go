@@ -329,12 +329,6 @@ func resolveRequestedRule(ctx context.Context, req SubmitDefenseValidationReques
 }
 
 func resolveRequestedRuleInput(ctx context.Context, req SubmitDefenseValidationRequest, runID, resultID string) RunOutcome {
-	if v2LocatorMode(req) {
-		return executeSharedContractV2(ctx, req, runID, resultID)
-	}
-	if locatorMode(req) {
-		return executeScenarioByLocator(ctx, req, runID, resultID)
-	}
 	if upstreamInputMode && len(req.UpstreamInputs) > 0 {
 		return executeScenarioUpstream(ctx, req, runID, resultID)
 	}
@@ -374,16 +368,6 @@ func setCanonicalIntegrity(out *RunOutcome) error {
 	payload, err := json.Marshal(unsigned)
 	if err != nil {
 		return err
-	}
-	if out.ProfileID != "" {
-		var document any
-		if err := decodeJSONAny(payload, &document); err != nil {
-			return err
-		}
-		payload, err = marshalRFC8785(document)
-		if err != nil {
-			return err
-		}
 	}
 	sum := sha256.Sum256(payload)
 	out.ContentSHA256 = "sha256:" + hex.EncodeToString(sum[:])

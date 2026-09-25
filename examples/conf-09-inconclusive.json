@@ -44,7 +44,7 @@
   "attack_suite": {
     "attack_suite_id": "attack-suite:CVE-2026-1234:direct:2",
     "vulnerability_id": "CVE-2026-1234",
-    "source": "check-generation + source-backed test source",
+    "source": "source-backed test source",
     "modality": "stateless-http",
     "cases": [
       {

@@ -68,16 +68,6 @@ type SubmitDefenseValidationRequest struct {
 	// here: they come from the environment, so a request cannot redirect the
 	// hand-off to another tenant. Omit it and nothing is posted.
 	Enforcement json.RawMessage `json:"enforcement,omitempty"`
-	// Reference-only mode is additive and mutually exclusive with inline artifacts
-	// and legacy upstream_inputs. Both immutable producer locators are resolved and
-	// verified only when this mode is selected.
-	RoutePolicy   string                  `json:"route_policy,omitempty"`
-	DefenseResult *ImmutableResultLocator `json:"defense_result,omitempty"`
-	CheckResult   *ImmutableResultLocator `json:"check_result,omitempty"`
-	// ProfileID selects an immutable route-adapter profile for the additive
-	// shared-contract v2 path. Hydrated CG/DG bodies never enter the request.
-	ProfileID string `json:"profile_id,omitempty"`
-
 	// --- Upstream defense-generation payload (new input contract) ---
 	// The mitigation rule is taken from primary_candidate.artifact_content. The
 	// remaining envelope fields are accepted (so a full defense-generation result
@@ -440,12 +430,6 @@ func validate(req SubmitDefenseValidationRequest) []string {
 	// the legacy reference ids are not required and the upstream contract is accepted.
 	if req.ContractID != contractID {
 		bad = append(bad, "contract_id")
-	}
-	if v2LocatorMode(req) {
-		return append(bad, validateV2LocatorRequest(req)...)
-	}
-	if locatorMode(req) {
-		return append(bad, validateLocatorRequest(req)...)
 	}
 	if strings.TrimSpace(req.CandidateArtifactID) == "" {
 		bad = append(bad, "candidate_artifact_id")

@@ -61,25 +61,6 @@ func TestCanonicalResultIntegrityExcludesIntegrityFields(t *testing.T) {
 	}
 }
 
-func TestSharedProfileCanonicalResultPayloadUsesRFC8785Integrity(t *testing.T) {
-	outcome := RunOutcome{
-		Capability: "defense-validation", ContractID: contractID, RequestID: "request:shared-integrity",
-		RunID: "run:shared-integrity", ResultID: "result:shared-integrity", Status: statusCompleted,
-		TerminalState: stateRuleResolved, ProfileID: sharedV2ProfileID, EvidenceRefs: []string{},
-		CreatedAt: time.Date(2026, 9, 14, 0, 0, 0, 0, time.UTC),
-	}
-	if err := setCanonicalIntegrity(&outcome); err != nil {
-		t.Fatal(err)
-	}
-	payload, err := canonicalResultPayload(outcome)
-	if err != nil {
-		t.Fatalf("shared-profile canonicalResultPayload: %v", err)
-	}
-	if err := validateCanonicalResultPayload(outcome, payload); err != nil {
-		t.Fatalf("shared-profile payload validation: %v", err)
-	}
-}
-
 func validLifecycleRequest(id string) SubmitDefenseValidationRequest {
 	candidate, _ := json.Marshal(CandidateSpec{Kind: "waf-rule", Rule: `SecRule REQUEST_BODY "@rx attack" "deny,status:403"`})
 	return SubmitDefenseValidationRequest{ContractID: contractID, RequestID: id, CorrelationID: "correlation-1",

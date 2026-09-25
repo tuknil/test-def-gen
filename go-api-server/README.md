@@ -38,48 +38,6 @@ The accepted contract is always `defense-validation@1.0`, independent of
 `upstream_inputs`, or both. Upstream resolution is selected only when configured
 and `upstream_inputs` is present.
 
-An additive reference-only mode accepts no executable inline content. It requires
-`route_policy: registered-waf-route-v1` and exactly two complete immutable
-locators in `defense_result` and `check_result`. The resolver directly queries
-only `36889_janus_dev.defense_generation.defense_generation_results` and
-`36889_janus_dev.check_generation.check_generation_results`, requires exactly
-one row from each, verifies row and logical-result identity and SHA-256 metadata,
-and hydrates a Check Generation payload only from the fixed managed Volume
-`/Volumes/36889_janus_dev/check_generation/payloads`. The Check Generation half is
-verified for lineage even though no test is derived from it. The resolver verifies the complete current Defense
-Generation canonical producer shape, including fully populated upstream result
-references, checks `primary_candidate.artifact_hash` against the exact artifact
-content, and validates the Check Generation persisted wrapper plus strict
-completion/result contract versions. Both verified locators are retained in result
-`input_provenance`, while verified producer
-evidence lineage is stably deduplicated into result `evidence_refs`. Locator SQL
-queries have a fixed 60-second deadline. Databricks input resolution is created
-only when a reference-only run needs it; inline and local startup remain usable
-without Databricks input configuration.
-
-The WAF-first shared-contract path is additive and selected with
-`route_policy: shared-attack-contracts-v2` and `profile_id: waf-standard@2`.
-Its request contains only the authenticated CG and DG immutable locators, never
-hydrated producer bodies. It first verifies both outer producer results, then
-validates the embedded `attack-match-semantics@2.0` and
-`candidate-bundle@1.0` against the repository-local Draft 2020-12 schemas. It
-also verifies RFC 8785 digests, CG source projection and complete ancestry,
-every DG artifact and directive, exact obligation mappings, candidate and bundle
-digests, and the complete all-or-nothing application unit. The older
-`registered-waf-route-v1` and inline/upstream paths are unchanged for replay.
-
-V2 reads back the complete candidate artifact set all-or-nothing: a match-rule and
-a carrier-configuration artifact must both be present, agree on their rule set, and
-cover exactly the same rules. The match-rule document's own bytes are then the rule
-that gets reported. Results add `profile_id` and the read-back `application_unit`,
-which is provenance for the rule rather than a judgement about it.
-
-Exact schemas, the offline catalog, route profile, direct CG/DG chain fixtures,
-and provenance manifests are checked into `api/contracts/shared-attack-contracts`
-and `api/testdata/shared-attack-contracts-v2`. Runtime schema resolution has no
-network loader. The approved Draft 2020-12 validator is vendored under
-`api/third_party/jsonschema`, so standalone CI has no sibling-repository dependency.
-
 Completed results are staged in PostgreSQL before external publication. The
 Databricks writer uses an insert-only `MERGE` keyed by `result_id`, then reads the
 row back and requires exact `run_id` and JSON equality. Recovery republishes the
@@ -126,19 +84,14 @@ or decide whether the rule blocks anything. Pushing the rule to a third-party
 control plane is the next stage, and any pass/fail determination belongs to that
 plane.
 
-The rule can be obtained three ways, tried in this order:
+The rule can be obtained two ways, tried in this order:
 
-1. **`route_policy: shared-attack-contracts-v2`** — verifies the compact CG
-   semantics and the DG candidate bundle, then reads the complete application unit
-   back. The match-rule document's own bytes are the rule.
-2. **`route_policy: registered-waf-route-v1`** — verifies two immutable producer
-   locators (`defense_result`, `check_result`) and takes the DG candidate.
-3. **`upstream_inputs`** — reads the rule from the `control-translation` entry's
+1. **`upstream_inputs`** — reads the rule from the `control-translation` entry's
    Databricks row, and only from that entry. Its `primary_candidate` carries no
    content, so the rule is resolved through the `artifacts` map by `artifact_id`
    and verified against its `content_hash`. Any other producer's result is
    rejected rather than guessed at.
-4. **inline `candidate`** — the rule travels in the request. This mode carries no
+2. **inline `candidate`** — the rule travels in the request. This mode carries no
    producer lineage, so nothing is verified against an upstream result.
 
 Every resolution failure ends the run as `failed`; a rule is never reported unless
